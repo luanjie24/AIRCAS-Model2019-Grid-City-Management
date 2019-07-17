@@ -14,13 +14,13 @@ from matplotlib.font_manager import _rebuild
 from sklearn.preprocessing import MinMaxScaler
 
 #=================================需更新的常量====================================
-ROW = 288 #数据行数=表格行数-1（减表头）
-COLUMN = 9 #数据列数=表格列数
-DATA_SIZE= 48 #数据量 每个街道有DATA_SIZE个月的数据
-FILE_NAME=u"暴露垃圾-六街道数据.csv"
+ROW = 288 #数据行数=表格行数-1（减表头） 这个现在在后面自动读取，不用改了 但有时候会出错
+COLUMN = 9 #数据列数=表格列数 这个通常不用改
+DATA_SIZE= 48 #数据量 每个街道有DATA_SIZE个月的数据 这个通常不同改
+FILE_NAME=u"积存渣土-所有街道数据.csv"
 #=================================================================================
 
-SITE_SIZE=int(ROW/DATA_SIZE)
+
 
 #设置绘图时的中文显示（需安装黑体字体）
 _rebuild()
@@ -28,9 +28,26 @@ mpl.rcParams['font.sans-serif']=[u'SimHei']
 mpl.rcParams['axes.unicode_minus']=False
 
 #读取数据
-df=pd.read_csv(FILE_NAME)
+df=pd.read_csv(FILE_NAME,encoding="gbk")
+#df=pd.read_csv(FILE_NAME)
+
+print("row:")
+print(len(df))
+ROW=len(df)
+SITE_SIZE=int(ROW/DATA_SIZE)
+
+
 inData=df.values[:ROW,3]
-inData=inData.astype('float32')
+try:
+    inData=inData.astype('float32')
+except:
+    print("+++++++++++++++++++++++++++++++++++++++++++++++")
+    print("行数row不准确，把ROW=len(df)注释掉改为手动输入行数")
+    print("+++++++++++++++++++++++++++++++++++++++++++++++")
+    print()
+    print()
+
+
 
 #在进行运算之前可以对数据进行归一化，进而降低loss
 scaler = MinMaxScaler(feature_range=(0,1 ))
@@ -89,7 +106,6 @@ for i in range(0,SITE_SIZE):
     pctError = []
     
     #print(predict_data)
-    print("123done")
     #predict_data = scaler.inverse_transform(predict_data.reshape(-1,1))
     #print(predict_data)
     
