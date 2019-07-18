@@ -44,6 +44,10 @@ except:
     print("+++++++++++++++++++++++++++++++++++++++++++++++")
     print("行数row不准确，把ROW=len(df)注释掉改为手动输入行数")
     print("+++++++++++++++++++++++++++++++++++++++++++++++")
+
+
+
+
 #将数据按站点分组
 site_data=[]  #站点数据列表
 site_names=[] #站点名字列表
@@ -55,63 +59,48 @@ for num in range(0,SITE_SIZE):
         site_data.append(inData[num*DATA_SIZE:(num+1)*DATA_SIZE-1])
 
 
+print(site_data[0])
+
 #分析原始样本趋势
-def show_data():
+def show_means():
+    #定义移动窗口和权重
+    N=6
+    n=np.ones(N)
+    weights=n/N
     plt.figure(figsize=(12, 8))
     plt.suptitle(u'原始样本数据趋势分析图')
     for i in range(0,SITE_SIZE):
+        
         subplot = plt.subplot(4,4,i+1)
         site = site_data[i]
-        plt.plot(site) #缺省x为[0,1,2,3,4,...]
+        #画数据
+        plt.plot(site,color='blue',label='原始数据') #缺省x为[0,1,2,3,4,...]
+
+        #画移动平均值
+        #调用convolve函数，并从获得的数组中取出长度为N的部分
+        sma=np.convolve(weights,site)[N-1:-N+1]
+        t=np.arange(N-1,len(site))
+        plt.plot(t,sma,lw=2,color='red', label='移动平均值')
+        
         plt.xlabel(u'时间')
         plt.ylabel(u'数值')
+        plt.legend(loc='best')
         subplot.set_title(site_names[i])
         plt.tight_layout()
     plt.show()  
 
-
-def test_stationarity(timeseries):
-
-    #Determing rolling statistics
-    site = site_data[1]
-    rolmean=df.rolling(12,inData).mean()
-    #rolmean = site.rolling(1).mean()
-    rolstd = pd.rolling_std(timeseries, window=12)
-
-    #Plot rolling statistics:
-    fig = plt.figure(figsize=(12, 8))
-    orig = plt.plot(timeseries, color='blue',label='Original')
-    mean = plt.plot(rolmean, color='red', label='Rolling Mean')
-    std = plt.plot(rolstd, color='black', label = 'Rolling Std')
-    plt.legend(loc='best')
-    plt.title('Rolling Mean & Standard Deviation')
-    plt.show()
-    '''
-    #Perform Dickey-Fuller test:
-    print 'Results of Dickey-Fuller Test:'
-    dftest = adfuller(timeseries, autolag='AIC')
-    dfoutput = pd.Series(dftest[0:4], index=['Test Statistic','p-value','#Lags Used','Number of Observations Used'])
-    for key,value in dftest[4].items():
-        dfoutput['Critical Value (%s)'%key] = value
-    print dfoutput 
-    '''
-
-#移动平均值 待修改
-def show_means():
-    plt.figure(1)
-    site = site_data[0]
-    N=2
-    n=np.ones(N)
-    weights=n/N
-    sma=np.convolve(weights,site)[N-1:-N+1]
-    t=np.arange(N-1,len(site))
-    plt.plot(t,site[N-1:],lw=1)
-    plt.plot(t,sma,lw=2)
-    plt.show()
+#分析原始样本ADF：
+def show_ADF():
+    for i in range(0,SITE_SIZE):
+        site = site_data[i]
+        name=site_names[i]
+        ADF = adfuller(site.ravel(),1)
+        print(name+"ADF:")
+        print(ADF)
 
 
 if __name__ == '__main__':
-    #test_stationarity(inData)
-    show_data()
     show_means()
+    show_ADF()
+
     
