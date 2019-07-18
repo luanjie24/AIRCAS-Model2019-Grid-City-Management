@@ -3,7 +3,7 @@ import numpy as np
 from scipy import stats
 import tushare as ts
 import datetime
-#from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.graphics.api import qqplot
 from statsmodels.tsa import stattools
 from statsmodels.tsa.stattools import adfuller
@@ -19,7 +19,7 @@ from sklearn.preprocessing import MinMaxScaler
 ROW = 288 #数据行数=表格行数-1（减表头） 这个现在在后面自动读取，不用改了 但有时候会出错
 COLUMN = 9 #数据列数=表格列数 这个通常不用改
 DATA_SIZE= 48 #数据量 每个街道有DATA_SIZE个月的数据 这个通常不同改
-FILE_NAME=u"积存渣土-所有街道数据.csv"
+FILE_NAME=u"乱堆物料-所有街道数据.csv"
 #=================================================================================
 
 #设置绘图时的中文显示（需安装黑体字体）
@@ -34,10 +34,18 @@ print("row:")
 print(len(df))
 ROW=len(df)
 SITE_SIZE=int(ROW/DATA_SIZE)
+
+
+#decomposition = seasonal_decompose(df["立案量"], model="additive")
+
+
+
 #案件数据
 inData=df.values[:ROW,3]
 
-month=[1,2,3,4,5,6,7,8,9,10,11,12]
+#inData = np.log(inData)
+
+
 try:
     inData=inData.astype('float32')
 except:
@@ -58,8 +66,13 @@ for num in range(0,SITE_SIZE):
     else:
         site_data.append(inData[num*DATA_SIZE:(num+1)*DATA_SIZE-1])
 
+'''
+ts_log = np.log(inData)
+f = plt.figure(facecolor='white')
+inData.plot(color='blue')
+plt.show()
+'''
 
-print(site_data[0])
 
 #分析原始样本趋势
 def show_means():
@@ -71,7 +84,7 @@ def show_means():
     plt.suptitle(u'原始样本数据趋势分析图')
     for i in range(0,SITE_SIZE):
         
-        subplot = plt.subplot(4,4,i+1)
+        subplot = plt.subplot(5,4,i+1)
         site = site_data[i]
         #画数据
         plt.plot(site,color='blue',label='原始数据') #缺省x为[0,1,2,3,4,...]
@@ -89,7 +102,10 @@ def show_means():
         plt.tight_layout()
     plt.show()  
 
-#分析原始样本ADF：
+
+
+
+#分析样本ADF：
 def show_ADF():
     for i in range(0,SITE_SIZE):
         site = site_data[i]
@@ -99,8 +115,58 @@ def show_ADF():
         print(ADF)
 
 
+
+
+#对样本序列进行平稳化操作并分析数据趋势
+def analyse_data():
+    #定义移动窗口和权重
+    N=6
+    n=np.ones(N)
+    weights=n/N
+    plt.figure(figsize=(12, 8))
+    plt.suptitle(u'原始样本数据趋势分析图')
+    for i in range(0,SITE_SIZE):
+        
+        subplot = plt.subplot(5,4,i+1)
+        site = site_data[i]
+
+        #对数化，让序列更光滑
+        site = np.log(site)
+
+        #调用convolve函数，并从获得的数组中取出长度为N的部分
+        sma=np.convolve(weights,site)[N-1:-N+1]
+        t=np.arange(N-1,len(site))
+
+        #做差
+        site_temp=site[N-1:]
+        sma_temp=sma
+        diff = site_temp-sma_temp
+        '''
+        print("site_temp:")
+        print(site_temp)
+        print("sma_temp:")
+        print(sma_temp)
+        '''
+
+        #画数据
+        plt.plot(site,color='blue',label='原始数据') #缺省x为[0,1,2,3,4,...]
+        #画移动平均值
+        plt.plot(t,sma,lw=2,color='red', label='移动平均值')
+        #画差
+        plt.plot(diff,lw=2,color='green', label='差')
+
+
+        plt.xlabel(u'时间')
+        plt.ylabel(u'数值')
+        plt.legend(loc='best')
+        subplot.set_title(site_names[i])
+        plt.tight_layout()
+    plt.show()  
+
+
 if __name__ == '__main__':
-    show_means()
-    show_ADF()
+    #show_means()
+    #show_ADF()
+    analyse_data()
 
     
