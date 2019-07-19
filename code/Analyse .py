@@ -19,7 +19,7 @@ from sklearn.preprocessing import MinMaxScaler
 ROW = 288 #数据行数=表格行数-1（减表头） 这个现在在后面自动读取，不用改了 但有时候会出错
 COLUMN = 9 #数据列数=表格列数 这个通常不用改
 DATA_SIZE= 48 #数据量 每个街道有DATA_SIZE个月的数据 这个通常不同改
-FILE_NAME=u"乱堆物料-所有街道数据.csv"
+FILE_NAME=u"积存渣土-所有街道数据.csv"
 #=================================================================================
 
 #设置绘图时的中文显示（需安装黑体字体）
@@ -76,6 +76,7 @@ plt.show()
 
 #分析原始样本趋势
 def show_means():
+    layout_num2=0#画图排版用的
     #定义移动窗口和权重
     N=6
     n=np.ones(N)
@@ -83,8 +84,10 @@ def show_means():
     plt.figure(figsize=(12, 8))
     plt.suptitle(u'原始样本数据趋势分析图')
     for i in range(0,SITE_SIZE):
-        
-        subplot = plt.subplot(5,4,i+1)
+        if(layout_num2==6):
+            layout_num2=0
+            plt.figure(figsize=(16, 9))
+        subplot = plt.subplot(3,2,layout_num2+1)
         site = site_data[i]
         #画数据
         plt.plot(site,color='blue',label='原始数据') #缺省x为[0,1,2,3,4,...]
@@ -100,6 +103,8 @@ def show_means():
         plt.legend(loc='best')
         subplot.set_title(site_names[i])
         plt.tight_layout()
+
+        layout_num2=layout_num2+1
     plt.show()  
 
 
@@ -119,48 +124,62 @@ def show_ADF():
 
 #对样本序列进行平稳化操作并分析数据趋势
 def analyse_data():
+    layout_num=0#画图排版用的
     #定义移动窗口和权重
     N=6
     n=np.ones(N)
     weights=n/N
     plt.figure(figsize=(12, 8))
-    plt.suptitle(u'原始样本数据趋势分析图')
+    '''
+    #移动平均值的开始横坐标
+    x=[]
+    for j in range(1,DATA_SIZE-1):
+        x.append(j)
+    print(x)
+    '''
+    #plt.suptitle(u'处理后数据趋势分析图')
     for i in range(0,SITE_SIZE):
         
-        subplot = plt.subplot(5,4,i+1)
+        
         site = site_data[i]
 
         #对数化，让序列更光滑
-        site = np.log(site)
+        log_site = np.log(site)
+
+        #print(log_site)
 
         #调用convolve函数，并从获得的数组中取出长度为N的部分
-        sma=np.convolve(weights,site)[N-1:-N+1]
-        t=np.arange(N-1,len(site))
-
+        sma=np.convolve(weights,log_site)[N-1:-N+1]
+        t=np.arange(N-1,len(log_site))
         #做差
-        site_temp=site[N-1:]
+        site_temp=log_site[N-1:]
         sma_temp=sma
         diff = site_temp-sma_temp
-        '''
-        print("site_temp:")
-        print(site_temp)
-        print("sma_temp:")
-        print(sma_temp)
-        '''
-
-        #画数据
-        plt.plot(site,color='blue',label='原始数据') #缺省x为[0,1,2,3,4,...]
+        #print(site)
+        
+        if(layout_num==6):
+            layout_num=0
+            plt.figure(figsize=(16, 9))
+        
+        subplot = plt.subplot(3,2,layout_num+1)
+        #画对数化以后的数据
+        plt.plot(log_site,color='yellow',label='对数化数据') #缺省x为[0,1,2,3,4,...]
         #画移动平均值
-        plt.plot(t,sma,lw=2,color='red', label='移动平均值')
+        plt.plot(t,sma,lw=2,color='red', label='对数化后的移动平均值')
         #画差
-        plt.plot(diff,lw=2,color='green', label='差')
+        plt.plot(t,diff,lw=2,color='green', label='对数化后作差')
+
+
 
 
         plt.xlabel(u'时间')
-        plt.ylabel(u'数值')
+        plt.ylabel(u'立案量')
         plt.legend(loc='best')
         subplot.set_title(site_names[i])
         plt.tight_layout()
+
+        layout_num=layout_num+1
+
     plt.show()  
 
 

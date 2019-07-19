@@ -15,8 +15,8 @@ from matplotlib.font_manager import _rebuild
 from sklearn.preprocessing import MinMaxScaler
 
 #读取数据
-FILE_NAME=u"抽样-四年统计街道 暴露垃圾 均值方差.csv"
-df=pd.read_csv(FILE_NAME,encoding="utf")
+FILE_NAME=u"积存渣土-所有街道数据.csv"
+df=pd.read_csv(FILE_NAME,encoding="gbk")
 
 
 #=================================需更新的常量====================================
@@ -42,10 +42,12 @@ scaler = MinMaxScaler()
 #scaler = MinMaxScaler(feature_range=(0,1))
 inData = scaler.fit_transform(inData.reshape(-1,1))
 
+'''
 #数据平稳化，使Adfuller指数小于-3.435298，并且p-value小于0.05
 ADF = adfuller(inData.ravel(),1)
 print("ADF:")
 print(ADF)
+'''
 
 stattools.q_stat(stattools.acf(inData)[1:13],len(inData))[1][-1]
 plot_acf(inData, lags= 30)
@@ -68,14 +70,20 @@ for num in range(0,SITE_SIZE):
         site_names.append(inData[num*DATA_SIZE:(num+1)*DATA_SIZE])
 
 #拟合（生成训练模型），开始预测
-plt.figure(3)
+plt.figure()
 plt.suptitle(u'分站点预测/实际值对比')
 MSE = []
 MAE = []
 MAPE = []
+layout_num=0#画图排版用的
 for i in range(0,SITE_SIZE):
+    if(layout_num==6):
+        layout_num=0
+        plt.figure(figsize=(16, 9))
+        plt.suptitle(u'分站点预测/实际值对比')
 
-    subplot = plt.subplot(6,4,i+1)
+    subplot = plt.subplot(3,2,layout_num+1)
+
     site = site_names[i]
     order = stattools.arma_order_select_ic(site, max_ar=3, max_ma=3, ic=['aic', 'bic', 'hqic'])
     print("(p,q):")
@@ -97,18 +105,19 @@ for i in range(0,SITE_SIZE):
     plt.plot(predict_data)
     plt.plot(site)
     plt.xlabel(u'时间')
-    plt.ylabel(u'数值')
+    plt.ylabel(u'立案量')
     plt.legend(labels = [u'预测数据',u'实际数据'])
     subplot.set_title(site_cnames[i])
+    plt.tight_layout()
     #MSE与MAE
     error = []
     pctError = []
     
     #print(predict_data)
-    print("123done")
     #predict_data = scaler.inverse_transform(predict_data.reshape(-1,1))
     #print(predict_data)
     
+    layout_num=layout_num+1
     for j in range(len(site)):
         #site[j] = scaler.inverse_transform(site[j].reshape(-1,1))
         #上面已经进行了反归一化。重点在于site 和 predict data需要在作图之前反归一化
@@ -127,7 +136,7 @@ for i in range(0,SITE_SIZE):
     MAE.append(mae)
     print('mse =',mse,'mae=',mae)
 #plot MSE,MAE
-plt.figure(4)
+plt.figure()
 msep = plt.subplot(211)
 maep = plt.subplot(212)
 plt.sca(msep)
@@ -144,7 +153,7 @@ plt.legend(labels = [u'MAE'])
 maep.set_title(u'MAE')
 plt.suptitle(u'分站点MSE与MAE对比')
 #plot MAPE
-plt.figure(5)
+plt.figure()
 plt.plot(site_cnames, MAPE)
 plt.xlabel(u'地点名称')
 plt.ylabel(u'误差比')
