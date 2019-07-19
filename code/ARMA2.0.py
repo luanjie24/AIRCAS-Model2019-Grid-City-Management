@@ -15,8 +15,8 @@ from matplotlib.font_manager import _rebuild
 from sklearn.preprocessing import MinMaxScaler
 
 #读取数据
-FILE_NAME=u"抽样-四年统计街道 暴露垃圾 均值方差.csv"
-df=pd.read_csv(FILE_NAME,encoding="utf")
+FILE_NAME=u"积存渣土-所有街道数据.csv"
+df=pd.read_csv(FILE_NAME,encoding="gbk")
 
 
 #=================================需更新的常量====================================
