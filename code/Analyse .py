@@ -91,6 +91,15 @@ def show_ADF():
         print(name+"ADF:")
         print(ADF)
 
+def show_diff_ADF(diff_data):
+    for i in range(0,SITE_SIZE):
+        site = diff_data[i]
+        name=site_names[i]
+        ADF = adfuller(site.ravel(),1)
+        print(name+"ADF:")
+        print(ADF)
+
+
 
 
 #对样本求移动平均值并分析趋势
@@ -127,13 +136,27 @@ def mean_it():
     plt.show()  
 
 
-#对样本做查分操作并分析趋势
+#对样本做差分操作并分析趋势
 def diff_it():
     layout_num3=0#画图排版用的
-    for i in range(0,SITE_SIZE):
-        site=site_data[i]
-        diff_site=diff_data[i]
 
+    #将数据按站点分为SITE_SIZE组
+    diff_data=[]  #站点数据列表
+    diff_names=[] #站点名字列表
+    for num in range(0,SITE_SIZE):
+        diff_names.append(df.at[num*DATA_SIZE, u'事发街道'])
+        #选取当前街道的所有立案量
+        temp=df.loc[(df[u'事发街道']==diff_names[num]) ,[u'立案量']] 
+        #K阶差分
+        temp=temp.diff(K)
+        #去掉缺失值
+        #temp=temp.where(temp.notnull(), 0.00001)
+        temp=temp.dropna()
+        diff_data.append(temp.values)
+
+    
+    for i in range(0,SITE_SIZE):
+        diff_site=diff_data[i]
         if(layout_num3==6):
             layout_num3=0
             plt.figure(figsize=(16, 9))
@@ -147,18 +170,61 @@ def diff_it():
         plt.xlabel(u'时间')
         plt.ylabel(u'立案量')
         plt.legend(loc='best')
-        subplot.set_title(site_names[i])
+        subplot.set_title(diff_names[i])
         plt.tight_layout()
 
         layout_num3=layout_num3+1
 
-
-
+        
+    show_diff_ADF(diff_data)
     plt.show()
 
 
 
+#对样本做差分操作并分析趋势
+def diff_log_it():
+    layout_num3=0#画图排版用的
 
+    #将数据按站点分为SITE_SIZE组
+    diff_data=[]  #站点数据列表
+    diff_names=[] #站点名字列表
+    for num in range(0,SITE_SIZE):
+        
+        diff_names.append(df.at[num*DATA_SIZE, u'事发街道'])
+        #选取当前街道的所有立案量
+        temp=df.loc[(df[u'事发街道']==diff_names[num]) ,[u'立案量']] 
+        #对数化
+        temp = np.log(temp)
+        #K阶差分
+        temp=temp.diff(K)
+        #去掉缺失值
+        #temp=temp.where(temp.notnull(), 0.00001)
+        temp=temp.dropna()
+        diff_data.append(temp.values)
+
+    
+    for i in range(0,SITE_SIZE):
+        site=diff_data[i]
+        diff_site=diff_data[i]
+        if(layout_num3==6):
+            layout_num3=0
+            plt.figure(figsize=(16, 9))
+        
+        subplot = plt.subplot(3,2,layout_num3+1)
+        #画数据
+        #plt.plot(site,color='yellow',label='原始数据') #缺省x为[0,1,2,3,4,...]
+        #画差分后的数据
+        plt.plot(diff_site,color='blue',label='对数化并差分数据') #缺省x为[0,1,2,3,4,...]
+
+        plt.xlabel(u'时间')
+        plt.ylabel(u'立案量')
+        plt.legend(loc='best')
+        subplot.set_title(diff_names[i])
+        plt.tight_layout()
+
+        layout_num3=layout_num3+1
+    show_diff_ADF(diff_data)
+    plt.show()
 
 
 
@@ -206,9 +272,10 @@ def log_it():
 
 
 if __name__ == '__main__':
-    #mean_it()
+    mean_it()
     #show_ADF()
     #log_it()
-    diff_it()
+    #diff_it()
+    #diff_log_it()
 
     

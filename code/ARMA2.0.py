@@ -15,7 +15,7 @@ from matplotlib.font_manager import _rebuild
 from sklearn.preprocessing import MinMaxScaler
 
 #读取数据
-FILE_NAME=u"积存渣土-所有街道数据.csv"
+FILE_NAME=u"暴露垃圾-所有街道数据.csv"
 df=pd.read_csv(FILE_NAME,encoding="gbk")
 
 
@@ -91,7 +91,7 @@ for i in range(0,SITE_SIZE):
     print(order.bic_min_order)  # (p,q)
 
     model = ARMA(site,pq).fit()
-    predict_data = model.predict(start=0,end=DATA_SIZE-1)
+    predict_data = model.predict(start=1,end=DATA_SIZE)
 
     #model = ARIMA(site, order=(2, 1, 2)).fit()
     #predict_data = model.predict(start=0,end=DATA_SIZE)
