@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #from __future__ import print_function
-#from keras.models import Sequential
+#from keras.models import Sequential #贯序模型
 from keras.layers.core import Dense, Activation, Dropout
 from keras.layers.recurrent import LSTM
 from keras.layers import Input, Embedding, merge
@@ -21,60 +21,66 @@ from matplotlib.font_manager import _rebuild
 #如需进行数据归一化则写入下一行代码
 from sklearn.preprocessing import MinMaxScaler
 
+#读取数据
+FILE_NAME=u"暴露垃圾-六街道数据.csv"
+#df=pd.read_csv(FILE_NAME,encoding="gbk")
+df=pd.read_csv(FILE_NAME)
+
+#=================================常量的定义或声明====================================
+ROW = df.shape[0] #数据行数=表格行数-1（减表头）
+ROW=288 #如果报错尝试这个 将288变为相应的行数
+COLUMN = 9 #数据列数=表格列数
+DATA_SIZE= 48 #数据量 每个街道有DATA_SIZE个月的数据
+SITE_SIZE=int(ROW/DATA_SIZE)#站点个数
+
+hourlyData=df.values[:ROW,3]
+hourlyData=hourlyData.astype('float32')#写成科学计数法（float32）
+Mon=df.values[:,2]#获得表格所有月份Mon
+
+delay=10 #根据前delay个数据预测下一个
+X=[] #输入 根据delay个数据成一组作为X，得到输出y （一个X有delay个数据，有多组X，所以是二维的,再加上多个街道，变成三维的了）
+y=[] #输出
+pre=1 #不知道这是干啥的
+
 #设置绘图时的中文显示（需安装黑体字体）
 _rebuild()
 mpl.rcParams['font.sans-serif']=[u'SimHei']
 mpl.rcParams['axes.unicode_minus']=False
+#=================================================================================
 
-df=pd.read_csv(u"抽样-四年统计街道 暴露垃圾 均值方差.csv",encoding='gbk')
 
-
-#获得表格第4列前289行的所有数据，也就是立按量 因为数据太大，目前这里只取前289行的立案量
-hourlyData=df.values[:288,3]
-#取所有时用这个
-#hourlyData=df.values[:,3]
-
-#获得表格所有月份Mon
-Mon=df.values[:,2]
-
-#写成科学计数法（float32）
-#hourlyData=hourlyData.astype('float32')
 #输出一下得到的案件量个数
 print('aqi data length:', len(hourlyData))
 
-
-
-#读取数据
-delay=10
-num_Data=48
-num_sites=6
-X=[]
-y=[]
-pre=1
-
-#立案量，转换成6行48列，每行代表不同的街道，每个街道有48个月的数据
-hourlyData = hourlyData.reshape(6,48)
-
+#立案量，转换成SITE_SIZE行DATA_SIZE列，每行代表不同的街道，每个街道有DATA_SIZE个月的数据
+hourlyData = hourlyData.reshape(SITE_SIZE,DATA_SIZE)
 #转置 现在每一列代表不同的街道了
 hourlyData = hourlyData.T
 
 
 
-#====================================以下为对训练样本的处理 标准化、打乱等================================
+#====================================以下为对训练样本的预处理 归一化、打乱、分训练测试组等================================
 #在进行运算之前可以对数据进行归一化，进而降低loss
 scaler = MinMaxScaler(feature_range=(0.001, 1))
 hourlyData = scaler.fit_transform(hourlyData)
 
+#此处应该是将时间序列转换为x,y的监督学习问题
 for d in range(delay,len(hourlyData)-pre+1):
-    X_one=hourlyData[d-delay:d,:]
+    X_one=hourlyData[d-delay:d,:] 
     X_one=X_one.reshape((1,X_one.shape[0],X_one.shape[1]))
     y_one=hourlyData[d,:]
     X.append(X_one)
     y.append(y_one)
-X=np.array(X).reshape((len(X),delay,num_sites))
+X=np.array(X).reshape((len(X),delay,SITE_SIZE))
 y=np.array(y)
-
+'''
+print("X")
+print(X)
+print("y")
+print(y)
+'''
 #shuffle data
+#随机排列x,y,Mon，但一一对应
 random.seed(10)
 random.shuffle(X)
 random.seed(10)
@@ -83,29 +89,43 @@ random.seed(10)
 random.shuffle(Mon)
 
 #split dataset
+#将数据分成训练组和测试组 前80%的数据作为训练，后20%的数据作为测试
 trLen=int(0.8*X.shape[0])
 train_set_x=X[:trLen,:]
 train_set_y=y[:trLen]
 test_set_x = X[trLen:,:]
 test_set_y=y[trLen:]
+
+'''
+print("train_set_x")
+print(train_set_x)
+print("train_set_y")
+print(train_set_y)
+print("test_set_x")
+print(test_set_x)
+print("test_set_y")
+print(test_set_y)
+'''
+
 #====================================================================
 
-#==========================================本模块采用LSTM建模================================================
+
+#==========================================LSTM建模================================================
 # build the model: 2 stacked LSTM
 print('Build model...')
-input_shape = (delay,num_sites)
+input_shape = (delay,SITE_SIZE)
 main_input = Input(shape=input_shape, name='main_input')
 rnn_out = LSTM(500, return_sequences=True,consume_less = 'gpu')(main_input)
 x = LSTM(500,consume_less = 'gpu')(rnn_out)
 
-#4、在后面连接一个隐层，输入为rnn输出和时间信息，采用sigmoid激活
+#4、在后面连接一个隐层，输入为rnn输出和时间信息，采用relu激活
 x = Dense(500, activation='relu')(x)
 #5、添加一个dropout层防止过拟合
 x = Dropout(0.5)(x)
 #6、后面添加一个隐层，采用relu作为激活函数，根据relu的特性，可以直接输出实数
 #x = Dense(100, activation='relu')(x)
 #7、继续使用relu输出最终预测值
-loss = Dense(num_sites, activation='relu', name='main_output')(x)
+loss = Dense(SITE_SIZE, activation='relu', name='main_output')(x)
 
 #使用刚才创建的图生成模型
 model = Model(input=[main_input], output=[loss])
@@ -130,15 +150,19 @@ def cal_acc(pre,real):
     acc[3]=1-sum((pre-real)**2)/sum((abs(pre-real.mean())+abs(real-real.mean()))**2)
     return acc.transpose()
 
+#把模型写入jason文件中，权重记录在.hdf5中？因为每次的权中事随机的 
 model_json = model.to_json()
 model_path = '$8.json'
 model_weight_path = '$8_weights.hdf5'
 with open(model_path, "w") as json_file:
     json_file.write(model_json)
-epoches = 100
+#迭代次数为100次
+epoches = 1
+#生成epoches行4列的零矩阵
 acc_tr=np.zeros((epoches,4))
 acc_t=np.zeros((epoches,4))
 history = []
+#生成epoches行2列的零矩阵
 msemae_tr = np.zeros((epoches,2))
 msemae_t = np.zeros((epoches,2))
 
@@ -151,8 +175,8 @@ def cal_msemae_tr():
     train_set_y = y[:trLen]
     train_set_y = scaler.inverse_transform(train_set_y)
     train_error = []
-    trainY = train_set_y.reshape(1, len(train_set_y) * num_sites)
-    trainP = trainPredict.reshape(1, len(trainPredict) * num_sites)
+    trainY = train_set_y.reshape(1, len(train_set_y) * SITE_SIZE)
+    trainP = trainPredict.reshape(1, len(trainPredict) * SITE_SIZE)
     for i in range(len(trainY)):
         train_error.append(trainP[i] - trainY[i])
     train_sqError = []
@@ -173,8 +197,8 @@ def cal_msemae_t():
     # 数据反归一化
     test_set_y = scaler.inverse_transform(test_set_y)
     test_error = []
-    testY = test_set_y.reshape(1, len(test_set_y) * num_sites)
-    testP = testPredict.reshape(1, len(testPredict) * num_sites)
+    testY = test_set_y.reshape(1, len(test_set_y) * SITE_SIZE)
+    testP = testPredict.reshape(1, len(testPredict) * SITE_SIZE)
     for i in range(len(testY)):
         test_error.append(testP[i] - testY[i])
     test_sqError = []
@@ -231,33 +255,49 @@ trainPredict = scaler.inverse_transform(trainPredict)
 train_set_y = scaler.inverse_transform(train_set_y)
 testPredict = scaler.inverse_transform(testPredict)
 test_set_y = scaler.inverse_transform(test_set_y)
-
-#作图：立案量vs时间
 hourlyData = scaler.inverse_transform(hourlyData)
-plt.figure(1)
-bzf = plt.subplot(231)
-cw = plt.subplot(232)
-cym = plt.subplot(233)
-rhm = plt.subplot(234)
-ds = plt.subplot(235)
-dhm = plt.subplot(236)
-street_list = [bzf,cw,cym,rhm,ds,dhm]
-x1 = np.linspace(1,48,48)
-street_names = [u'白纸坊',u'朝外',u'朝阳门',u'大红门',u'德胜',u'东华门']
 
-def plot1(i,supt):
-    plt.plot(x1,hourlyData[:,i])
-    plt.xlabel(u'时间（月）')
-    plt.ylabel(u'立案量')
-    street_list[i].set_title(street_names[i])
-    plt.legend(labels = [u'立案量'],loc='upper left')
 
-for i in range(0,6):
-    plt.sca(street_list[i])
-    plot1(i,street_names[i])
-plt.suptitle('各地点按月立案数量')
+#将数据按站点分组
+site_data=[]  #站点数据列表
+site_names=[] #站点名字列表
+for num in range(0,SITE_SIZE):
+    site_names.append(df.at[num*DATA_SIZE, u'事发街道'])
+    if num==0:
+        site_data.append(hourlyData[1:DATA_SIZE-1])
+    else:
+        site_data.append(hourlyData[num*DATA_SIZE:(num+1)*DATA_SIZE-1])
+
+
+
+
+
+#作图：真实值&预测值vs时间
+#训练数据组
+plt.figure(figsize=(12, 8))
+plt.suptitle(u'真实值&预测值对比图')
+layout_num=0#画图排版用的
+def plot2(i):
+    plt.plot(trainPredict[:,i])
+    plt.plot(train_set_y[:,i])
+    plt.xlabel(u'数据编号')
+    plt.ylabel(u'数值')
+for i in range(0,SITE_SIZE):
+    if(layout_num==6): #一张图六个站点
+        layout_num=0
+        plt.figure(figsize=(16, 9))
+    subplot = plt.subplot(3,2,layout_num+1)
+    #plt.sca(site_data[i])
+    plot2(i)
+    plt.legend(labels=[site_names[i]+"预测", site_names[i]+"实际"])
+    #site_data[i].set_title(site_names[i])
+    plt.tight_layout()
+    layout_num=layout_num+1
+plt.suptitle(u'训练数据预测/实际值')
+
 
 #作图：精度vs迭代次数
+
 plt.figure(2)
 x2 = np.linspace(1,100,len(a[:,0]))
 x21 = np.linspace(1,100,len(a[:,1]))
@@ -268,30 +308,7 @@ plt.ylabel(u'精度')
 plt.title(u'测试/训练精度与时间对比')
 plt.legend(labels = [u'训练精度',u'测试精度'],loc = 'upper left')
 
-#作图：真实值&预测值vs时间
-#训练数据组
-plt.figure(3)
-bzf3 = plt.subplot(231)
-cw3 = plt.subplot(232)
-cym3 = plt.subplot(233)
-rhm3 = plt.subplot(234)
-ds3 = plt.subplot(235)
-dhm3 = plt.subplot(236)
-legend_labels = [u'白纸坊预测', u'朝外预测',u'朝阳门预测',u'大红门预测',u'德胜预测',u'东华门预测',
-                 u'白纸坊实际',u'朝外实际',u'朝阳门实际',u'大红门实际',u'德胜实际',u'东华门实际']
-street_list3 = [bzf3,cw3,cym3,rhm3,ds3,dhm3]
-def plot2(i):
-    plt.plot(trainPredict[:,i])
-    plt.plot(train_set_y[:,i])
 
-    plt.xlabel(u'数据编号')
-    plt.ylabel(u'数值')
-for i in range(0,6):
-    plt.sca(street_list3[i])
-    plot2(i)
-    plt.legend(labels=[legend_labels[i], legend_labels[6+i]])
-    street_list3[i].set_title(street_names[i])
-plt.suptitle(u'训练数据预测/实际值')
 
 #测试数据组
 plt.figure(4)
@@ -310,8 +327,8 @@ def plot3(i):
 for i in range(0,6):
     plt.sca(street_list4[i])
     plot3(i)
-    plt.legend(labels=[legend_labels[i], legend_labels[6+i]])
-    street_list4[i].set_title(street_names[i])
+    plt.legend(labels=[site_names[i]+"预测", site_names[i]+"实际"])
+    street_list4[i].set_title(site_names[i])
 plt.suptitle(u'测试数据预测/实际值')
 
 #作图：MSE与MAE
@@ -351,3 +368,5 @@ with open(u"输出数据8w.csv", "w", newline="",encoding="utf-8-sig") as datacs
         csvwriter.writerow([months[i + 30], testPredict[i, 0],test_set_y[i,0], testPredict[i, 1],test_set_y[i,1],
                             testPredict[i, 2],test_set_y[i,2], testPredict[i, 3],test_set_y[i,3],
                             testPredict[i, 4],test_set_y[i,4],testPredict[i, 5],test_set_y[i,5]])
+
+

@@ -20,7 +20,7 @@ from sklearn.preprocessing import MinMaxScaler
 ROW = 288 #数据行数=表格行数-1（减表头） 这个现在在后面自动读取，不用改了 但有时候会出错
 COLUMN = 9 #数据列数=表格列数 这个通常不用改
 DATA_SIZE= 48 #数据量 每个街道有DATA_SIZE个月的数据 这个通常不同改
-FILE_NAME=u"无照经营-所有街道数据.csv"
+FILE_NAME=u"暴露垃圾-所有街道数据.csv"
 K=2 #K为差分阶数
 #=================================================================================
 
@@ -127,7 +127,7 @@ def mean_it():
         plt.plot(t,sma,lw=2,color='red', label='移动平均值')
         
         plt.xlabel(u'时间')
-        plt.ylabel(u'数值')
+        plt.ylabel(u'立案量')
         plt.legend(loc='best')
         subplot.set_title(site_names[i])
         plt.tight_layout()
