@@ -22,13 +22,15 @@ from matplotlib.font_manager import _rebuild
 from sklearn.preprocessing import MinMaxScaler
 
 
-FILE_NAME = u"积存渣土-所有街道数据.csv"
+FILE_NAME = u"非法小广告-所有街道数据.csv"
 df=pd.read_csv(FILE_NAME,encoding='gbk')
 #df=pd.read_csv(FILE_NAME)
 #=================================常量的定义或声明====================================
-ROW = df.shape[0] #数据行数=表格行数-1（减表头）
+#ROW = df.shape[0] #数据行数=表格行数-1（减表头）
+ROW=48 #如果报错尝试这个 将288变为相应的行数
 DATA_SIZE=48 #数据量 每个街道有DATA_SIZE个月的数据
 SITE_SIZE=int(ROW/DATA_SIZE)#站点个数
+SITE_SIZE=1
 
 hourlyData=df.values[:ROW,3]
 hourlyData=hourlyData.astype('float32')#写成科学计数法（float32）
@@ -66,8 +68,15 @@ for d in range(delay,len(hourlyData)-pre+1):
     y_one=hourlyData[d,:]
     X.append(X_one)
     y.append(y_one)
-X=np.array(X).reshape((len(X),delay,SITE_SIZE))
-y=np.array(y)
+X=np.array(X).reshape((len(X),delay,SITE_SIZE)) #reshape页、行、列 三维
+y=np.array(y) #二维
+
+'''
+print("X")
+print(X)
+print("y")
+print(y)
+'''
 
 #shuffle data
 #随机排列x,y,Mon，但一一对应
@@ -85,12 +94,23 @@ train_set_x=X[:trLen,:]
 train_set_y=y[:trLen]
 test_set_x = X[trLen:,:]
 test_set_y=y[trLen:]
+
+'''
+print("train_set_x")
+print(train_set_x)
+print("train_set_y")
+print(train_set_y)
+print("test_set_x")
+print(test_set_x)
+print("test_set_y")
+print(test_set_y)
+'''
 #====================================================================
 
 #==========================================本模块采用LSTM建模================================================
 # build the model: 2 stacked LSTM
 print('Build model...')
-input_shape = (delay,SITE_SIZE)
+input_shape = (delay,SITE_SIZE) #每delay个数据预测一个 输入格式为delay行SITE_SIZE列的矩阵
 main_input = Input(shape=input_shape, name='main_input')
 rnn_out = LSTM(500, return_sequences=True,consume_less = 'gpu')(main_input)
 x = LSTM(500,consume_less = 'gpu')(rnn_out)
@@ -107,9 +127,10 @@ loss = Dense(SITE_SIZE, activation='relu', name='main_output')(x)
 #使用刚才创建的图生成模型
 model = Model(input=[main_input], output=[loss])
 
-solver = Adam(lr=0.001)
+solver = Adam(lr=0.001) #学习率为0.001
 model.compile(optimizer=solver,
-                  loss={'main_output': 'mape'} )
+                  loss={'main_output': 'mape'} ) #optimizer优化器选择Adam 回头可以再尝试一下RMSprop
+                                                #损失函数loss用的mape?
 
 #=============================================================================================
 
@@ -135,7 +156,7 @@ with open(model_path, "w") as json_file:
     json_file.write(model_json)
 
 #迭代次数为100次
-epoches = 1
+epoches = 60
 #生成epoches行4列的零矩阵
 acc_tr=np.zeros((epoches,4))
 acc_t=np.zeros((epoches,4))
@@ -145,53 +166,6 @@ history = []
 #msemae_tr = np.zeros((epoches,2))
 #msemae_t = np.zeros((epoches,2))
 
-'''#定义MSE/MAE误差计算方式
-def cal_msemae_tr():
-    # train set
-    trainPredict = model.predict([train_set_x])
-    # 数据反归一化
-    trainPredict = scaler.inverse_transform(trainPredict)
-    train_set_y = y[:trLen]
-    train_set_y = scaler.inverse_transform(train_set_y)
-    train_error = []
-    trainY = train_set_y.reshape(1, len(train_set_y) * SITE_SIZE)
-    trainP = trainPredict.reshape(1, len(trainPredict) * SITE_SIZE)
-    for i in range(len(trainY)):
-        train_error.append(trainP[i] - trainY[i])
-    train_sqError = []
-    train_absError = []
-    for val in train_error:
-        train_sqError.append(val * val)
-        train_absError.append(abs(val))
-    train_MSE = sum(train_sqError) / len(train_sqError)
-    train_MAE = sum(train_absError) / len(train_absError)
-    msemae = np.zeros((2,1))
-    msemae[0] = sum(train_MSE) / len(train_MSE)
-    msemae[1] = sum(train_MAE) / len(train_MAE)
-    return  msemae.T
-def cal_msemae_t():
-    testPredict = model.predict([test_set_x])
-    testPredict = scaler.inverse_transform(testPredict)
-    test_set_y = y[trLen:]
-    # 数据反归一化
-    test_set_y = scaler.inverse_transform(test_set_y)
-    test_error = []
-    testY = test_set_y.reshape(1, len(test_set_y) * SITE_SIZE)
-    testP = testPredict.reshape(1, len(testPredict) * SITE_SIZE)
-    for i in range(len(testY)):
-        test_error.append(testP[i] - testY[i])
-    test_sqError = []
-    test_absError = []
-    for val in test_error:
-        test_sqError.append(val * val)
-        test_absError.append(abs(val))
-    test_MSE = sum(test_sqError) / len(test_sqError)
-    test_MAE = sum(test_absError) / len(test_absError)
-    msemae = np.zeros((2,1))
-    msemae[0] = sum(test_MSE) / len(test_MSE)
-    msemae[1] = sum(test_MAE) / len(test_MAE)
-    return  msemae.T
-'''
 #================================================================训练LSTM=====================================
 #开始迭代
 for epoch in range(epoches):
@@ -199,15 +173,15 @@ for epoch in range(epoches):
     print('-' * 50)
     print('epoch', epoch)
     if epoch==50:
-        solver = Adam(lr=0.0001)
+        solver = Adam(lr=0.0001)#降低学习率
         model.compile(optimizer=solver,
-                  loss={'main_output': 'mape'} )
+                  loss={'main_output': 'mape'} ) 
     hist = model.fit({'main_input': train_set_x},
                   {'main_output': train_set_y},validation_data=(
                     {'main_input': test_set_x, },
                     {'main_output': test_set_y}
                   ),verbose = 1,
-                  nb_epoch=10, batch_size=128)
+                  nb_epoch=10, batch_size=int(DATA_SIZE/2)) #batch_size待确定 nb_epoch是训练数据遍历的次数
     acc_tr[epoch,:]=cal_acc(model.predict([train_set_x]),train_set_y)
     acc_t[epoch,:]=cal_acc(model.predict([test_set_x]),test_set_y)
     #msemae_tr[epoch,:] = cal_msemae_tr()
@@ -243,49 +217,8 @@ for num in range(0,SITE_SIZE):
     site_cnames.append(df.at[num*DATA_SIZE, u'事发街道'])
     site_names.append(hourlyData[:,num])
 
-#作图：立案量vs时间
-plt.figure(figsize=(16,9))
-plt.suptitle(u'各地点按月立案数量')
-layout_num = 0
-for i in range(0,SITE_SIZE):
-    if(layout_num==6):
-        layout_num=0
-        plt.figure(figsize=(16, 9))
-        plt.suptitle(u'各地点按月立案数量')
-    subplot = plt.subplot(3, 2, layout_num + 1)
-    site = site_names[i]
-    #plt.plot(predict_data)
-    plt.plot(site_names[i])
-    plt.xlabel(u'时间')
-    plt.ylabel(u'立案量')
-    plt.legend(labels=[u'立案量'],loc = 'best')
-    subplot.set_title(site_cnames[i])
-    plt.tight_layout()
-    layout_num = layout_num + 1
-'''
-plt.figure(1)
-bzf = plt.subplot(231)
-cw = plt.subplot(232)
-cym = plt.subplot(233)
-rhm = plt.subplot(234)
-ds = plt.subplot(235)
-dhm = plt.subplot(236)
-street_list = [bzf,cw,cym,rhm,ds,dhm]
-x1 = np.linspace(1,48,48)
-street_names = [u'白纸坊',u'朝外',u'朝阳门',u'大红门',u'德胜',u'东华门']
 
-def plot1(i,supt):
-    plt.plot(x1,hourlyData[:,i])
-    plt.xlabel(u'时间（月）')
-    plt.ylabel(u'立案量')
-    street_list[i].set_title(street_names[i])
-    plt.legend(labels = [u'立案量'],loc='upper left')
 
-for i in range(0,6):
-    plt.sca(street_list[i])
-    plot1(i,street_names[i])
-plt.suptitle('各地点按月立案数量')
-'''
 #作图：精度vs迭代次数
 plt.figure(figsize=(16,9))
 #x2 = np.linspace(1,100,len(a[:,0]))
@@ -318,32 +251,9 @@ for i in range(0,SITE_SIZE):
     subplot.set_title(site_cnames[i])
     plt.tight_layout()
     layout_num = layout_num + 1
-'''
-plt.figure(3)
-bzf3 = plt.subplot(231)
-cw3 = plt.subplot(232)
-cym3 = plt.subplot(233)
-rhm3 = plt.subplot(234)
-ds3 = plt.subplot(235)
-dhm3 = plt.subplot(236)
-legend_labels = [u'白纸坊预测', u'朝外预测',u'朝阳门预测',u'大红门预测',u'德胜预测',u'东华门预测',
-                 u'白纸坊实际',u'朝外实际',u'朝阳门实际',u'大红门实际',u'德胜实际',u'东华门实际']
-street_list3 = [bzf3,cw3,cym3,rhm3,ds3,dhm3]
-def plot2(i):
-    plt.plot(trainPredict[:,i])
-    plt.plot(train_set_y[:,i])
 
-    plt.xlabel(u'数据编号')
-    plt.ylabel(u'数值')
-for i in range(0,6):
-    plt.sca(street_list3[i])
-    plot2(i)
-    plt.legend(labels=[legend_labels[i], legend_labels[6+i]])
-    street_list3[i].set_title(street_names[i])
-plt.suptitle(u'训练数据预测/实际值')
-'''
+
 #测试数据组
-
 plt.figure(figsize=(16,9))
 plt.suptitle(u'分站点预测/实际值对比（测试数据）')
 layout_num = 0
@@ -362,27 +272,7 @@ for i in range(0,SITE_SIZE):
     subplot.set_title(site_cnames[i])
     plt.tight_layout()
     layout_num=layout_num+1
-'''
-plt.figure(4)
-bzf4 = plt.subplot(231)
-cw4 = plt.subplot(232)
-cym4 = plt.subplot(233)
-rhm4 = plt.subplot(234)
-ds4 = plt.subplot(235)
-dhm4 = plt.subplot(236)
-street_list4 = [bzf4,cw4,cym4,rhm4,ds4,dhm4]
-def plot3(i):
-    plt.plot(testPredict[:,i])
-    plt.plot(test_set_y[:,i])
-    plt.xlabel(u'数据编号')
-    plt.ylabel(u'数值')
-for i in range(0,6):
-    plt.sca(street_list4[i])
-    plot3(i)
-    plt.legend(labels=[legend_labels[i], legend_labels[6+i]])
-    street_list4[i].set_title(street_names[i])
-plt.suptitle(u'测试数据预测/实际值')
-'''
+
 #作图：MSE与MAE
 plt.figure(5)
 mseTrain = plt.subplot(221)
@@ -417,7 +307,7 @@ plt.show()
 #将预测数据输出为csv文件
 months = np.linspace(delay+1,DATA_SIZE,DATA_SIZE-10)
 months = np.array(months)
-with open(u"输出文件："+file_name, "w", newline="",encoding="utf-8-sig") as datacsv:
+with open(u"输出文件："+FILE_NAME, "w", newline="",encoding="utf-8-sig") as datacsv:
     csvwriter = csv.writer(datacsv, dialect=("excel"))
     first_row = [u'月份/地点']
     for i in range(0,SITE_SIZE):
@@ -445,3 +335,4 @@ with open(u"输出文件："+file_name, "w", newline="",encoding="utf-8-sig") as
         #csvwriter.writerow([months[i + trLen], testPredict[i, 0],test_set_y[i,0], testPredict[i, 1],test_set_y[i,1],
         #                   testPredict[i, 2],test_set_y[i,2], testPredict[i, 3],test_set_y[i,3],
         #                  testPredict[i, 4],test_set_y[i,4],testPredict[i, 5],test_set_y[i,5]])
+
