@@ -12,7 +12,7 @@ from sklearn.preprocessing import MinMaxScaler
 
 rng = np.random.RandomState(0)
 
-FILE_NAME=u"暴露垃圾-所有街道数据.csv"
+FILE_NAME=u"无照经营-所有街道数据.csv"
 df=pd.read_csv(FILE_NAME,encoding="gbk")
 
 ROW = df.shape[0] #数据行数=表格行数-1（减表头）
@@ -44,6 +44,7 @@ for num in range(0,SITE_SIZE):
 # 生成数据
 layout_num = 0
 plt.figure(figsize=(16,9))
+mape_array = []
 for i in range(SITE_SIZE):
     X = np.linspace(1,48,48).reshape(-1,1)
 
@@ -84,14 +85,34 @@ for i in range(SITE_SIZE):
         plt.suptitle(u'分站点预测/实际值对比')
 
     subplot = plt.subplot(3, 2, layout_num + 1)
-    plt.scatter(X[:train_size], y[:train_size], c='k', label='data', zorder=1)
+    plt.scatter(X[:train_size], y[:train_size], c='k', label=u'实际数据散点图', zorder=1)
     #plt.plot(y,c='b',label = 'real data')
     plt.plot( X_plot, y_svr, c='r',
-         label='SVR predict data (fit: %.3fs, predict: %.3fs)' % (svr_fit, svr_predict))
-    plt.xlabel('data')
-    plt.ylabel('target')
-    plt.title('SVR versus Kernel Ridge')
+         label=u'预测数据')
+    plt.xlabel(u'时间（月）')
+    plt.ylabel(u'立案量')
+    plt.title(site_cnames[i])
     plt.legend()
     plt.tight_layout()
     layout_num = layout_num + 1
+
+    APE = []
+    for j in range(48):
+        APE.append(abs(y[j]-y_svr[j])/y[j])
+    mape = sum(APE)/48
+    mape_array.append(mape)
+
+layout_num = 0
+plt.figure()
+
+
+plt.plot(site_cnames,mape_array)
+plt.xlabel(u'站点')
+plt.ylabel('MAPE')
+plt.title(u'分站点MAPE')
+plt.legend(labels = [u'MAPE'])
+plt.tight_layout()
+
+
+
 plt.show()
