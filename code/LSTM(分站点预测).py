@@ -24,12 +24,13 @@ from matplotlib.font_manager import _rebuild
 from sklearn.preprocessing import MinMaxScaler
 #=====================================================================
 FILE_NAME = u"积存渣土-所有街道数据.csv"
+NAME = u"积存渣土"
 #=====================================================================
 #将下面这个参数从1开始跑，
 #比如num_site=1跑一次，num_site=2跑一次，num_site=3跑一次。。。以此类推，直到系统提示“本文件所有站点预测完毕”为止
 
 
-num_site=1
+num_site=14
 
 
 #=====================================================================
@@ -90,6 +91,7 @@ hourlyData = hourlyData.T
 #====================================以下为对训练样本的预处理 归一化、打乱、分训练测试组等================================
 #在进行运算之前可以对数据进行归一化，进而降低loss
 scaler = MinMaxScaler(feature_range=(0.01, 1))#这个归一化也有影响 比如要是（0，1）就无法拟合
+#scaler = MinMaxScaler()#这种有的就无法拟合
 hourlyData = scaler.fit_transform(hourlyData)
 
 #此处应该是将时间序列转换为x,y的监督学习问题
@@ -299,10 +301,29 @@ test_set_y = scaler.inverse_transform(test_set_y)
 #将数据按站点分为SITE_SIZE组
 site_names=[]  #站点数据列表
 site_cnames=[] #站点名字列表
-site_cnames.append(df.at[(num_site-1)*DATA_SIZE, u'事发街道'])
+#site_cnames.append(df.at[(num_site-1)*DATA_SIZE, u'事发街道'])
+site_cnames.append("站点"+str(num_site))#隐藏站点名称
 site_names.append(hourlyData[:,0])
 
 
+#作图：立案量vs时间
+plt.figure(figsize=(16,9))
+layout_num = 0
+for i in range(0,SITE_SIZE):
+    if(layout_num==1):
+        layout_num=0
+        plt.figure(figsize=(16, 9))
+        plt.suptitle(u'各地点按月立案数量')
+    subplot = plt.subplot(1, 1, layout_num + 1)
+    site = site_names[i]
+    plt.plot(site_names[i])
+    plt.xlabel(u'时间')
+    plt.ylabel(u'立案量')
+    plt.legend(labels=[u'立案量'],loc = 'best')
+    subplot.set_title(str(NAME)+'-'+site_cnames[i]+u"-当前打乱的原始数据")
+    plt.tight_layout()
+    layout_num = layout_num + 1
+plt.savefig(NAME+'-'+str(site_cnames[0])+"-当前打乱的原始数据.png")
 
 #作图：精度vs迭代次数
 plt.figure(figsize=(16,9))
@@ -312,9 +333,9 @@ plt.plot(a[:,0])
 plt.plot(a[:,1])
 plt.xlabel(u'迭代次数')
 plt.ylabel(u'精度')
-plt.title(u'测试/训练精度与时间对比')
+plt.title(str(NAME)+'-'+str(site_cnames[0])+u'-测试/训练精度与时间对比')
 plt.legend(labels = [u'训练精度',u'测试精度'],loc ='best')
-plt.savefig(str(site_cnames[0])+"-精度.png")
+plt.savefig(NAME+'-'+str(site_cnames[0])+"-精度.png")
 
 #作图：真实值&预测值vs时间
 #训练数据组
@@ -334,10 +355,10 @@ for i in range(0,SITE_SIZE):
     plt.xlabel(u'数据编号')
     plt.ylabel(u'数值')
     plt.legend(labels=[u'预测数据',u'实际数据'])
-    subplot.set_title(site_cnames[i]+u'-预测/实际值对比（训练数据）')
+    subplot.set_title(str(NAME)+'-'+site_cnames[i]+u'-预测/实际值对比（训练数据）')
     plt.tight_layout()
     layout_num = layout_num + 1
-plt.savefig(str(site_cnames[0])+"-训练预测.png")
+plt.savefig(NAME+'-'+str(site_cnames[0])+"-训练预测.png")
 
 #测试数据组
 plt.figure(figsize=(16,9))
@@ -355,10 +376,10 @@ for i in range(0,SITE_SIZE):
     plt.xlabel(u'数据编号')
     plt.ylabel(u'数值')
     plt.legend(labels=[u'预测数据',u'实际数据'])
-    subplot.set_title(site_cnames[i]+u'-预测/实际值对比（测试数据）')
+    subplot.set_title(str(NAME)+'-'+site_cnames[i]+u'-预测/实际值对比（测试数据）')
     plt.tight_layout()
     layout_num=layout_num+1
-plt.savefig(str(site_cnames[0])+"-测试预测.png")
+plt.savefig(NAME+'-'+str(site_cnames[0])+"-测试预测.png")
 #作图：MSE与MAE MAPE
 plt.figure(figsize=(12, 8))
 mseTrain = plt.subplot(321)
@@ -393,11 +414,11 @@ for i in range(0,6):
     plt.sca(msemaeList[i])
     plot4(i)
     plt.legend(labels = [msemaeLabels[i]],loc = 'best')
-    msemaeList[i].set_title(msemaeLabels[i])
-plt.suptitle(u'训练与测试MSE/MAE/MAPE对比')
+    msemaeList[i].set_title(str(NAME)+'-'+str(site_cnames[0])+msemaeLabels[i])
+plt.suptitle(str(NAME)+'-'+str(site_cnames[0])+u'-训练与测试MSE/MAE/MAPE对比')
 plt.tight_layout()
 
-plt.savefig(str(site_cnames[0])+"-误差.png")
+plt.savefig(NAME+'-'+str(site_cnames[0])+"-误差.png")
 plt.show()
 
 
@@ -432,7 +453,7 @@ with open(u"输出文件："+FILE_NAME, "w", newline="",encoding="utf-8-sig") as
 months = Mon
 months = np.array(months)
 
-with open(u"输出文件："+"站点"+str(num_site)+FILE_NAME, "w", newline="",encoding="utf-8-sig") as datacsv:
+with open(u"预测输出："+NAME+"-站点"+str(num_site)+'.csv', "w", newline="",encoding="utf-8-sig") as datacsv:
     csvwriter = csv.writer(datacsv, dialect=("excel"))
     first_row = [u'月份/地点']
     for i in range(0,SITE_SIZE):
