@@ -15,7 +15,7 @@ from matplotlib.font_manager import _rebuild
 from sklearn.preprocessing import MinMaxScaler
 
 #读取数据
-FILE_NAME=u"暴露垃圾-所有街道数据.csv"
+FILE_NAME=u"无照经营-所有街道数据.csv"
 df=pd.read_csv(FILE_NAME,encoding="gbk")
 
 
@@ -63,7 +63,8 @@ print(order.bic_min_order)#(p,q)'''
 site_names=[]  #站点数据列表
 site_cnames=[] #站点名字列表
 for num in range(0,SITE_SIZE):
-    site_cnames.append(df.at[num*DATA_SIZE, u'事发街道'])
+    #site_cnames.append(df.at[num*DATA_SIZE, u'事发街道'])
+    site_cnames.append("站点"+str(num+1))#隐藏站点名称
     if num==0:
         site_names.append(inData[0:DATA_SIZE])
     else:
@@ -75,6 +76,7 @@ plt.suptitle(u'分站点预测/实际值对比')
 MSE = []
 MAE = []
 MAPE = []
+MAPE2 = []
 layout_num=0#画图排版用的
 for i in range(0,SITE_SIZE):
     if(layout_num==6):
@@ -91,27 +93,30 @@ for i in range(0,SITE_SIZE):
     print(order.bic_min_order)  # (p,q)
 
     model = ARMA(site,pq).fit()
-    predict_data = model.predict(start=1,end=DATA_SIZE)
-
+    predict_data = model.predict(start=1,end=DATA_SIZE) 
+    predict_data2 = model.predict() #0到48
     #model = ARIMA(site, order=(2, 1, 2)).fit()
-    #predict_data = model.predict(start=0,end=DATA_SIZE)
+    #predict_data = model.predict(start=0,end=DATA_SIZE) #0到49
 
     #在这里进行反归一化#
     predict_data = scaler.inverse_transform(predict_data.reshape(-1,1))
+    predict_data2= scaler.inverse_transform(predict_data2.reshape(-1,1))
     site = scaler.inverse_transform(site.reshape(-1,1))
     site = np.exp(site)#–––––––––––––
     predict_data = np.exp(predict_data)#–––––––––––––––
-
-    plt.plot(predict_data)
-    plt.plot(site)
+    predict_data2 = np.exp(predict_data2)
+    plt.plot(predict_data,color='orange')
+    plt.plot(site,color='black')
     plt.xlabel(u'时间')
     plt.ylabel(u'立案量')
-    plt.legend(labels = [u'预测数据',u'实际数据'])
+    plt.legend(labels = [u'预测数据',u'实际数据'],loc=1)
     subplot.set_title(site_cnames[i])
     plt.tight_layout()
     #MSE与MAE
     error = []
     pctError = []
+    error2 = []
+    pctError2 = []
     
     #print(predict_data)
     #predict_data = scaler.inverse_transform(predict_data.reshape(-1,1))
@@ -122,7 +127,9 @@ for i in range(0,SITE_SIZE):
         #site[j] = scaler.inverse_transform(site[j].reshape(-1,1))
         #上面已经进行了反归一化。重点在于site 和 predict data需要在作图之前反归一化
         error.append(predict_data[j]-site[j])
+        error2.append(predict_data2[j]-site[j])
         pctError.append(abs((predict_data[j]-site[j])/site[j]))
+        pctError2.append(abs((predict_data2[j]-site[j])/site[j]))
     sqError = []
     absError = []
     for val in error:
@@ -131,7 +138,9 @@ for i in range(0,SITE_SIZE):
     mse = sum(sqError)/len(sqError)
     mae = sum(absError)/len(absError)
     mape = sum(pctError)/len(pctError)
+    mape2 = sum(pctError2)/len(pctError2)
     MAPE.append(mape)
+    MAPE2.append(mape2)
     MSE.append(mse)
     MAE.append(mae)
     print('mse =',mse,'mae=',mae)
@@ -141,23 +150,26 @@ msep = plt.subplot(211)
 maep = plt.subplot(212)
 plt.sca(msep)
 plt.plot(site_cnames,MSE)
-plt.xlabel(u'地点名称')
+plt.xlabel(u'站点编号')
 plt.ylabel(u'误差')
-plt.legend(labels = [u'MSE'])
+plt.legend(labels = [u'MSE'],loc=1)
 msep.set_title(u'MSE')
 plt.sca(maep)
 plt.plot(site_cnames,MAE)
-plt.xlabel(u'地点名称')
+plt.xlabel(u'站点编号')
 plt.ylabel(u'误差')
-plt.legend(labels = [u'MAE'])
+plt.legend(labels = [u'MAE'],loc=1)
 maep.set_title(u'MAE')
 plt.suptitle(u'分站点MSE与MAE对比')
 #plot MAPE
 plt.figure()
-plt.plot(site_cnames, MAPE)
-plt.xlabel(u'地点名称')
+plt.plot(site_cnames, MAPE,color='black')
+plt.plot(site_cnames, MAPE2,color='orange')
+plt.xlabel(u'站点编号')
 plt.ylabel(u'误差比')
-plt.legend(labels = ['MAPE'])
+plt.legend(labels = ['解决滞后性后的MAPE','解决滞后性前的MAPE'],loc=1)
 plt.title(u'分站点MAPE对比')
 
 plt.show()
+print("=================MAPE==========")
+print(MAPE)

@@ -36,7 +36,8 @@ site_cnames=[] #站点名字列表
 #inData = scaler.fit_transform(inData.reshape(-1,1))
 
 for num in range(0,SITE_SIZE):
-    site_cnames.append(df.at[num*DATA_SIZE, u'事发街道'])
+    #site_cnames.append(df.at[num*DATA_SIZE, u'事发街道']) 
+    site_cnames.append("站点"+str(num+1))#隐藏站点名称
     if num==0:
         site_names.append(inData[0:DATA_SIZE])
     else:
@@ -92,7 +93,7 @@ for i in range(SITE_SIZE):
     plt.xlabel(u'时间（月）')
     plt.ylabel(u'立案量')
     plt.title(site_cnames[i])
-    plt.legend()
+    plt.legend(loc=1)
     plt.tight_layout()
     layout_num = layout_num + 1
 
@@ -107,12 +108,12 @@ plt.figure()
 
 
 plt.plot(site_cnames,mape_array)
-plt.xlabel(u'站点')
+plt.xlabel(u'站点编号')
 plt.ylabel('MAPE')
 plt.title(u'分站点MAPE')
-plt.legend(labels = [u'MAPE'])
+plt.legend(labels = [u'MAPE'],loc=1)
 plt.tight_layout()
 
-
+print(mape_array)
 
 plt.show()

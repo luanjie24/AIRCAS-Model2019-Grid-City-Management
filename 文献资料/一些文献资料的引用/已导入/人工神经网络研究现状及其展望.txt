@@ -1,0 +1,17 @@
+%0 Journal Article
+%A 朱大奇
+%+ 江南大学,通信与控制工程学院,江苏,无锡,214036
+%T 人工神经网络研究现状及其展望
+%J 江南大学学报(自然科学版)
+%J JOURNAL OF SOUTHERN YANGTZE UNIVERSITY(NATURAL SCIENCE EDITION)
+%@ 1671-7147
+%G chi
+%D 2004
+%N 1
+%V 3
+%P 103-110
+%K 人工神经网络; 感知器; 并行分布处理; 模糊神经网络; 量子神经网络
+%X 回顾了神经网络理论发展的历史和现状.在此基础上,介绍并讨论了20世纪90年代神经网络研究的一些新进展.根据神经网络研究的特点,对人工神经网络今后的发展前景作了一定的评述, 人工神经网络的研究与发展必将对现代科学技术产生深远的影响.
+%U http://www.wanfangdata.com.cn/details/detail.do?_type=perio&id=jiangndxxb200401027
+%R 10.3969/j.issn.1671-7147.2004.01.027
+%W 北京万方数据股份有限公司

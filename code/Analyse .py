@@ -20,7 +20,7 @@ from sklearn.preprocessing import MinMaxScaler
 ROW = 288 #数据行数=表格行数-1（减表头） 这个现在在后面自动读取，不用改了 但有时候会出错
 COLUMN = 9 #数据列数=表格列数 这个通常不用改
 DATA_SIZE= 48 #数据量 每个街道有DATA_SIZE个月的数据 这个通常不同改
-FILE_NAME=u"积存渣土-所有街道数据.csv"
+FILE_NAME=u"无照经营-所有街道数据.csv"
 K=2 #K为差分阶数
 #=================================================================================
 
@@ -31,7 +31,7 @@ mpl.rcParams['axes.unicode_minus']=False
 
 #读取数据
 df=pd.read_csv(FILE_NAME,encoding="gbk")
-
+#df=pd.read_csv(FILE_NAME)
 
 
 #df=pd.read_csv(FILE_NAME)
@@ -52,7 +52,6 @@ diff_df = np.log(df["立案量"])#差分前对数平滑处理
 diff_df=diff_df.diff(K)#差分用的
 diff_df=diff_df.tolist()
 
-#inData = np.log(inData)
 
 
 try:
@@ -63,7 +62,7 @@ except:
     print("+++++++++++++++++++++++++++++++++++++++++++++++")
 
 
-
+inData = np.log(inData)
 
 
 
@@ -86,15 +85,16 @@ for num in range(0,SITE_SIZE):
 def show_ADF():
     for i in range(0,SITE_SIZE):
         site = site_data[i]
-        name=site_names[i]
+        name="站点"+str(i)
         ADF = adfuller(site.ravel(),1)
-        print(name+"ADF:")
+        print(name+" ADF:")
         print(ADF)
-
+        
+#在diff_it和difii_log_it中使用，不能直接用
 def show_diff_ADF(diff_data):
     for i in range(0,SITE_SIZE):
         site = diff_data[i]
-        name=site_names[i]
+        name="站点"+str(i)
         ADF = adfuller(site.ravel(),1)
         print(name+"ADF:")
         print(ADF)
@@ -220,7 +220,8 @@ def diff_log_it():
 
         plt.xlabel(u'时间')
         plt.ylabel(u'立案量')
-        plt.legend(loc='best')
+        plt.legend(loc=1)#图例显示在右上角
+        #plt.legend()
         subplot.set_title(diff_names[i])
         plt.tight_layout()
 
@@ -274,10 +275,9 @@ def log_it():
 
 
 if __name__ == '__main__':
-    mean_it()
+    #mean_it()
     #show_ADF()
     #log_it()
     #diff_it()
-    #diff_log_it()
-
+    diff_log_it()
     

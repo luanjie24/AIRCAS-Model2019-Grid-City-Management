@@ -15,7 +15,7 @@ from matplotlib.font_manager import _rebuild
 from sklearn.preprocessing import MinMaxScaler
 
 #读取数据
-FILE_NAME=u"暴露垃圾-所有街道数据.csv"
+FILE_NAME=u"无照经营-所有街道数据.csv"
 df=pd.read_csv(FILE_NAME,encoding="gbk")
 
 
@@ -81,7 +81,7 @@ for i in range(0,SITE_SIZE):
     subplot = plt.subplot(3,2,layout_num+1)
 
     site = site_names[i]
-    order = stattools.arma_order_select_ic(site, max_ar=3, max_ma=3, ic=['aic', 'bic', 'hqic'])
+    order = stattools.arma_order_select_ic(site, max_ar=20, max_ma=20, ic=['aic', 'bic', 'hqic'])
     print("(p,q):")
     pq = order.bic_min_order
     print(order.bic_min_order)  # (p,q)

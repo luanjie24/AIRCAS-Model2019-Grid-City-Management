@@ -19,7 +19,7 @@ from pmdarima.arima import auto_arima
 
 #load the data
 
-FILE_NAME=u"暴露垃圾-所有街道数据.csv"
+FILE_NAME=u"无照经营-所有街道数据.csv"
 df=pd.read_csv(FILE_NAME,encoding="gbk")
 
 ROW = df.shape[0] #数据行数=表格行数-1（减表头）
@@ -35,12 +35,18 @@ mpl.rcParams['axes.unicode_minus']=False
 #将数据按站点分为SITE_SIZE组
 site_data=[]  #站点数据列表
 site_names=[] #站点名字列表
+temp_name=[]
+
 for num in range(0,SITE_SIZE):
         
-    site_names.append(df.at[num*DATA_SIZE, u'事发街道'])
+    temp_name.append(df.at[num*DATA_SIZE, u'事发街道'])
+    site_names.append("站点"+str(num+1))#隐藏站点名称
     #选取当前街道的所有立案量
-    temp=df.loc[(df[u'事发街道']==site_names[num]) ,[u'立案量']] 
+    temp=df.loc[(df[u'事发街道']==temp_name[num]) ,[u'立案量']] 
     site_data.append(temp)
+    
+    
+
 
 
 #拟合（生成训练模型），开始预测
@@ -53,7 +59,7 @@ layout_num=0#画图排版用的
 for i in range(0,SITE_SIZE):
     if(layout_num==6):
         layout_num=0
-        plt.figure(figsize=(16, 9))
+        plt.figure()
         plt.suptitle(u'分站点预测/实际值对比')
 
     subplot = plt.subplot(3,2,layout_num+1)
@@ -64,23 +70,34 @@ for i in range(0,SITE_SIZE):
     model.fit(site)
 
     forecast=model.predict(n_periods=len(site))
+
+
+
     forecast=pd.DataFrame(forecast,index=site.index,columns=['Prediction'])
     
     
     #plot the predictions for validation set
-    plt.plot(forecast)
-    plt.plot(site)
+    plt.plot(forecast,color='orange')
+    plt.plot(site,color='black')
     plt.xlabel(u'时间')
     plt.ylabel(u'立案量')
-    plt.legend(labels = [u'预测数据',u'实际数据'])
+    plt.legend(labels = [u'预测数据',u'实际数据'],loc=1)
     subplot.set_title(site_names[i])
     plt.tight_layout()
+
     '''
     #calculate rmse
     rms = sqrt(mean_squared_error(valid,forecast))
     print(rms)
     '''
     layout_num=layout_num+1
+
+
+
+
+
+
+
 
 plt.show()
 
